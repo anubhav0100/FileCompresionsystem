@@ -25,6 +25,7 @@ def run_test():
     print("Running decompression...")
     subprocess.run(["python", "main.py", "decompress", comp_file, decomp_file], check=True)
     
+    # Because decompress_archive works the same way for files if is_dir is false.
     decomp_size = os.path.getsize(decomp_file)
     print(f"Decompressed size: {decomp_size} bytes")
     

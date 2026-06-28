@@ -9,7 +9,7 @@ class ArchiveFormat:
         file_obj.write(MAGIC)
     
     @staticmethod
-    def write_footer(file_obj, chunk_map):
+    def write_footer(file_obj, chunk_map, is_dir=False):
         """
         Writes the chunk map at the end of the file so we can compress streaming chunks.
         chunk_map is a list of tuples: (compressed_size, original_size)
@@ -25,6 +25,9 @@ class ArchiveFormat:
         # Write the offset of the map (8 bytes)
         file_obj.write(struct.pack('<Q', map_offset))
         
+        # Write is_dir flag (1 byte)
+        file_obj.write(struct.pack('?', is_dir))
+        
         # Write magic again to verify it's a complete file
         file_obj.write(MAGIC)
         
@@ -32,16 +35,18 @@ class ArchiveFormat:
     def read_footer(file_obj):
         """
         Reads the footer to extract the chunk map.
-        Returns a list of tuples: (compressed_size, original_size)
+        Returns a tuple: (chunk_map, is_dir)
         """
-        file_obj.seek(-12, os.SEEK_END)
+        file_obj.seek(-13, os.SEEK_END)
         map_offset_bytes = file_obj.read(8)
+        is_dir_byte = file_obj.read(1)
         magic_bytes = file_obj.read(4)
         
         if magic_bytes != MAGIC:
             raise ValueError("Invalid archive format or incomplete file (magic missing at end).")
             
         map_offset = struct.unpack('<Q', map_offset_bytes)[0]
+        is_dir = struct.unpack('?', is_dir_byte)[0]
         
         file_obj.seek(map_offset)
         num_chunks = struct.unpack('<Q', file_obj.read(8))[0]
@@ -51,4 +56,4 @@ class ArchiveFormat:
             comp_size, orig_size = struct.unpack('<QQ', file_obj.read(16))
             chunk_map.append((comp_size, orig_size))
             
-        return chunk_map
+        return chunk_map, is_dir
